@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import FormSection from './components/FormSection';
 import WorkoutDisplay from './components/WorkoutDisplay';
 
-const API_BASE_URL = 'http://127.0.0.1:8001';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const App = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
