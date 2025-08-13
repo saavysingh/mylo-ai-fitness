@@ -1,7 +1,7 @@
 # mylo_ai_fitness/models/user.py
 from datetime import datetime
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 
 class PhysicalStats(BaseModel):
