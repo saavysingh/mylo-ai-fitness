@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 # Enums and Allowlists
@@ -22,18 +22,16 @@ class Basics(BaseModel):
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
     activity_level: Optional[str] = None
-    prior_experience: Optional[str] = None
 
 class GoalBlock(BaseModel):
     goals: List[str] = Field(default_factory=list)
-    focus_body_parts: List[str] = Field(default_factory=list)
 
 class PrefsConstraints(BaseModel):
     injuries: List[str] = Field(default_factory=list)
     equipment: List[str] = Field(default_factory=list)
     preferred_workout_types: List[str] = Field(default_factory=list)
     preferred_training_times: List[str] = Field(default_factory=list)
-    time_per_session_min: Optional[int] = None
+# Removed unused time_per_session_min field
     not_preferred_exercises: List[str] = Field(default_factory=list)
     special_considerations: List[str] = Field(default_factory=list)
 
@@ -45,21 +43,7 @@ class ConversationState(BaseModel):
     prefs: Optional[PrefsConstraints] = None
     missing: List[str] = Field(default_factory=list)
 
-class IntakeBasicResponse(BaseModel):
-    type: str = "intake_summary"
-    normalized_basics: Basics
-    derived: Dict[str, Union[str, float]]
-    missing: List[str] = Field(default_factory=list)
-    followup: Optional[str] = None
-    warnings: List[str] = Field(default_factory=list)
-
-class IntakeGoalsResponse(BaseModel):
-    type: str = "goals_summary"
-    normalized_basics: Basics
-    normalized_goals: List[str] = Field(default_factory=list)
-    goal_rationale: Optional[str] = None
-    missing: List[str] = Field(default_factory=list)
-    followup: Optional[str] = None
+# Removed unused response models - using simplified ChatOut instead
 
 class ChatIn(BaseModel):
     session_id: str

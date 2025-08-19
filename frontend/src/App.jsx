@@ -11,16 +11,16 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+      <header className="fixed top-0 left-0 right-0 bg-white shadow">
+        <div className="max-w-4xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+          <h1 className="text-2xl font-bold text-gray-900">
             🏋️‍♂️ Mylo AI Fitness
           </h1>
-          <p className="text-gray-600 mt-2">Your personalized AI fitness coach</p>
+          <p className="text-gray-600 mt-1">Your personalized AI fitness coach</p>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 h-[calc(100vh-5rem)]">
         {!workout ? (
           <ChatContainer onWorkoutGenerated={handleWorkoutGenerated} />
         ) : (

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from services.orchestrator import WorkoutOrchestrator
 from fastapi.middleware.cors import CORSMiddleware 
 from models.user import FitnessGoal, PhysicalStats, Restrictions, UserPreferences, UserProfile
@@ -7,6 +7,15 @@ from models.schemas import (
     GENDER, ACTIVITY, GOALS, EQUIPMENT, WORKOUT_TYPES, TIMES
 )
 import uuid
+from typing import Dict
+
+from services.transcription import (
+    save_upload_to_temp,
+    transcribe_audio_to_text,
+    extract_fields_from_transcript,
+    compute_missing,
+    _get_whisper_model,
+)
 
 app = FastAPI(title="Mylo AI Fitness", description="AI-powered workout generation API")
 app.add_middleware(
@@ -101,7 +110,7 @@ async def chat_ingest(chat_in: ChatIn) -> ChatOut:
             else:
                 assistant_text = f"I still need a few details from you: {', '.join(missing)}. This helps me create the perfect plan for you!"
         else:
-            assistant_text = "Hi! I'm Mylo, your AI fitness coach. To create a personalized plan for you, I'll need some basic information. Let's start with your age, gender, height, weight, and activity level."
+            assistant_text = "Hi! I'm Mylo, your AI fitness coach. To create a personalized plan for you, I'll need some basic information. Could you tell about the following?"
             controls = {
                 "required_fields": ["age", "gender", "height_cm", "weight_kg", "activity_level"],
                 "options": {
@@ -170,4 +179,59 @@ async def chat_ingest(chat_in: ChatIn) -> ChatOut:
         next_stage=next_stage,
         controls=controls
     )
+
+
+@app.post("/speech/transcribe")
+async def speech_transcribe(stage: ChatStage, session_id: str, file: UploadFile = File(...)) -> Dict:
+    """Transcribe uploaded audio and extract stage-specific selections.
+
+    Returns: { transcript, stage, selections, missing }
+    """
+    # Basic content-type filtering
+    allowed_types = {
+        "audio/webm",
+        "audio/ogg",
+        "audio/mpeg",
+        "audio/wav",
+        "audio/mp4",
+        "video/mp4",  # some browsers send m4a/mp4 container as video/mp4
+    }
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Unsupported content-type: {file.content_type}")
+
+    tmp_path = save_upload_to_temp(file)
+    try:
+        transcript = transcribe_audio_to_text(tmp_path)
+        if not transcript:
+            raise HTTPException(status_code=422, detail="No speech detected")
+
+        try:
+            selections = extract_fields_from_transcript(stage.value, transcript)
+        except Exception:
+            # Fallback: return transcript and empty selections if extraction fails
+            selections = {}
+        missing = compute_missing(stage.value, selections)
+
+        return {
+            "transcript": transcript,
+            "stage": stage.value,
+            "selections": selections,
+            "missing": missing,
+            "session_id": session_id,
+        }
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)  # type: ignore[arg-type]
+        except Exception:
+            pass
+
+
+@app.on_event("startup")
+async def warm_whisper_model() -> None:
+    """Warm up the Whisper model at startup to avoid first-request latency."""
+    try:
+        _get_whisper_model()
+    except Exception as exc:
+        # Do not crash app; log-only behavior
+        print(f"[startup] Whisper warmup failed: {exc}")
 
