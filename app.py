@@ -110,7 +110,7 @@ async def chat_ingest(chat_in: ChatIn) -> ChatOut:
             else:
                 assistant_text = f"I still need a few details from you: {', '.join(missing)}. This helps me create the perfect plan for you!"
         else:
-            assistant_text = "Hi! I'm Mylo, your AI fitness coach. To create a personalized plan for you, I'll need some basic information. Could you tell about the following?"
+            assistant_text = "Hi! I'm Mylo, your AI fitness coach. To create a personalized plan for you, I'll need some basic information from you. Could you tell me about your age, gender, height, weight, and activity level?"
             controls = {
                 "required_fields": ["age", "gender", "height_cm", "weight_kg", "activity_level"],
                 "options": {
