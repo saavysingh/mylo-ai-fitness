@@ -13,37 +13,25 @@ from core.config import GROQ_API_KEY
 
 _whisper_model = None
 
-# Use a production-safe, writable cache directory. Prefer env override, then /tmp on PaaS.
-_DEFAULT_CACHE_DIR = os.getenv("WHISPER_CACHE_DIR") or "/tmp/faster_whisper"
-_CACHE_DIR = Path(_DEFAULT_CACHE_DIR).resolve()
-_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
 
 def _get_whisper_model():
-    """Lazy-load a singleton faster-whisper model to avoid cold starts per request."""
+    """Lazy-load a singleton OpenAI Whisper model to avoid cold starts per request."""
     global _whisper_model
     if _whisper_model is None:
         try:
             # Import here so the app can still run even if dependency isn't installed yet
-            from faster_whisper import WhisperModel  # type: ignore
+            import whisper  # type: ignore
         except Exception as exc:  # pragma: no cover - dependency missing
             raise HTTPException(status_code=500, detail=f"Transcription backend not available: {exc}")
 
         # Use a small model for low latency on CPU by default; allow override via env
         model_size = os.getenv("WHISPER_MODEL_SIZE", "tiny.en")
-        cpu_threads = int(os.getenv("WHISPER_THREADS", "4"))
-        _whisper_model = WhisperModel(
-            model_size,
-            device="cpu",
-            compute_type="int8",
-            download_root=str(_CACHE_DIR),
-            cpu_threads=cpu_threads,
-        )
+        _whisper_model = whisper.load_model(model_size)
     return _whisper_model
 
 
 def transcribe_audio_to_text(file_path: Path) -> str:
-    """Transcribe an audio file to text using faster-whisper.
+    """Transcribe an audio file to text using OpenAI Whisper.
 
     Args:
         file_path: path to audio file
@@ -52,15 +40,8 @@ def transcribe_audio_to_text(file_path: Path) -> str:
     """
     model = _get_whisper_model()
     try:
-        segments, info = model.transcribe(
-            str(file_path),
-            vad_filter=True,
-            vad_parameters={"min_silence_duration_ms": 500},
-            beam_size=1,
-            temperature=0.0,
-        )
-        transcript_parts: List[str] = [seg.text.strip() for seg in segments if seg.text]
-        return " ".join(transcript_parts).strip()
+        result = model.transcribe(str(file_path))
+        return result["text"].strip()
     except HTTPException:
         raise
     except Exception as exc:
