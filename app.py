@@ -187,16 +187,20 @@ async def speech_transcribe(stage: ChatStage, session_id: str, file: UploadFile 
 
     Returns: { transcript, stage, selections, missing }
     """
-    # Basic content-type filtering
+    # Basic content-type filtering - be more permissive for audio files
     allowed_types = {
         "audio/webm",
-        "audio/ogg",
+        "audio/ogg", 
         "audio/mpeg",
         "audio/wav",
         "audio/mp4",
+        "audio/aiff",
+        "audio/x-aiff",
+        "application/octet-stream",  # Many audio files get detected as this
         "video/mp4",  # some browsers send m4a/mp4 container as video/mp4
     }
-    if file.content_type not in allowed_types:
+    # Allow any content type that starts with "audio/" or common misdetections
+    if file.content_type not in allowed_types and not file.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail=f"Unsupported content-type: {file.content_type}")
 
     tmp_path = save_upload_to_temp(file)

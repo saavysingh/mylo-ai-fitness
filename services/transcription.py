@@ -21,12 +21,41 @@ def _get_whisper_model():
         try:
             # Import here so the app can still run even if dependency isn't installed yet
             import whisper  # type: ignore
+            import ssl
         except Exception as exc:  # pragma: no cover - dependency missing
             raise HTTPException(status_code=500, detail=f"Transcription backend not available: {exc}")
 
         # Use a small model for low latency on CPU by default; allow override via env
         model_size = os.getenv("WHISPER_MODEL_SIZE", "tiny.en")
-        _whisper_model = whisper.load_model(model_size)
+        
+        # Handle SSL certificate issues in development
+        try:
+            _whisper_model = whisper.load_model(model_size)
+        except Exception as ssl_exc:
+            # If SSL fails, try with unverified context (dev environment only)
+            if "CERTIFICATE_VERIFY_FAILED" in str(ssl_exc):
+                try:
+                    # Create unverified SSL context for model download
+                    import urllib.request
+                    import ssl
+                    ssl_context = ssl.create_default_context()
+                    ssl_context.check_hostname = False
+                    ssl_context.verify_mode = ssl.CERT_NONE
+                    
+                    # Monkey patch urllib for this download
+                    original_opener = urllib.request.build_opener()
+                    urllib.request.install_opener(urllib.request.build_opener(
+                        urllib.request.HTTPSHandler(context=ssl_context)
+                    ))
+                    
+                    _whisper_model = whisper.load_model(model_size)
+                    
+                    # Restore original opener
+                    urllib.request.install_opener(original_opener)
+                except Exception:
+                    raise HTTPException(status_code=500, detail="Could not download Whisper model due to SSL issues")
+            else:
+                raise HTTPException(status_code=500, detail=f"Model loading failed: {ssl_exc}")
     return _whisper_model
 
 
