@@ -1,0 +1,25 @@
+# Production requirements with precompiled wheels only
+# Core FastAPI and server
+fastapi==0.116.1
+uvicorn==0.35.0
+
+# Build tools (pin to avoid deprecation issues)
+setuptools<81
+wheel
+pip>=21.0
+
+# HTTP requests
+requests==2.32.4
+
+# Data validation
+pydantic==2.11.7
+
+# Environment configuration
+python-dotenv==1.1.1
+
+# File uploads
+python-multipart==0.0.20
+
+# Alternative: Use Groq API for transcription instead of local Whisper
+# This avoids all the wheel building issues
+# The app can fall back to this if whisper import fails

@@ -60,21 +60,52 @@ def _get_whisper_model():
 
 
 def transcribe_audio_to_text(file_path: Path) -> str:
-    """Transcribe an audio file to text using OpenAI Whisper.
+    """Transcribe an audio file to text using OpenAI Whisper or Groq API fallback.
 
     Args:
         file_path: path to audio file
     Returns:
         transcript string (may be empty if nothing recognized)
     """
-    model = _get_whisper_model()
+    # Try local Whisper first
     try:
+        model = _get_whisper_model()
         result = model.transcribe(str(file_path))
         return result["text"].strip()
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}")
+        # If local Whisper fails (e.g., in production), try Groq API fallback
+        try:
+            return _transcribe_with_groq_api(file_path)
+        except Exception:
+            raise HTTPException(status_code=500, detail=f"Transcription failed: {exc}")
+
+
+def _transcribe_with_groq_api(file_path: Path) -> str:
+    """Fallback transcription using Groq API."""
+    import requests
+    
+    try:
+        with open(file_path, 'rb') as audio_file:
+            files = {'file': audio_file}
+            headers = {'Authorization': f'Bearer {GROQ_API_KEY}'}
+            
+            response = requests.post(
+                'https://api.groq.com/openai/v1/audio/transcriptions',
+                headers=headers,
+                files=files,
+                data={'model': 'whisper-large-v3'},
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                return response.json().get('text', '').strip()
+            else:
+                raise Exception(f"Groq API error: {response.status_code}")
+                
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Groq transcription failed: {exc}")
 
 
 def _call_groq_json(system_prompt: str, user_prompt: str) -> Dict:
