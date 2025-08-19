@@ -3,3 +3,33 @@ __pycache__/
 .env
 .venv/
 *.log
+myenv/
+venv/
+.DS_Store
+
+# Python caches
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Node / frontend
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+frontend/build/
+frontend/.turbo/
+frontend/.vite/
+
+# Model & data caches
+model_cache/
+**/faster_whisper/
+*.wav
+*.aiff
+*.mp3
+tmp_*
+
+# IDE/editor
+.idea/
+.vscode/
+.history/

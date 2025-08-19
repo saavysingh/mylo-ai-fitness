@@ -12,7 +12,10 @@ from core.config import GROQ_API_KEY
 
 
 _whisper_model = None
-_CACHE_DIR = (Path(__file__).parent.parent / "model_cache" / "faster_whisper").resolve()
+
+# Use a production-safe, writable cache directory. Prefer env override, then /tmp on PaaS.
+_DEFAULT_CACHE_DIR = os.getenv("WHISPER_CACHE_DIR") or "/tmp/faster_whisper"
+_CACHE_DIR = Path(_DEFAULT_CACHE_DIR).resolve()
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
